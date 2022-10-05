@@ -1,6 +1,8 @@
 # This is a basic workflow to help you get started with Actions
 
-name: CI
+
+
+name: ChristianHFlow
 
 # Controls when the workflow will run
 on:
@@ -19,18 +21,40 @@ jobs:
   build:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
-
+    
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
+      - name: 'Checkout GitHub Action'
+        uses: actions/checkout@v3
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+#      - name: Setup DotNet ${{ env.DOTNET_VERSION }} Environment
+#        uses: actions/setup-dotnet@v2
+#        with:
+#          dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      # Notice here I'm building and releasing my solution.
+      # This allows me to use the packages - fx from the Function or the Webapp
+      - name: 'Resolve Project Dependencies Using Dotnet'
+        shell: pwsh
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          pushd './${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
+          dotnet build --configuration Release --output ./output
+          popd
+
+      - uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+      - run: |
+          az webapp list --query "[?state=='Running']"
+      
+      - name: Deploy resources
+        uses: azure/powershell@v1
+        with:
+          inlineScript: |
+            .\deploy-resources.ps1
+          azPSVersion: "latest"
+      
+      
+      
+      
